@@ -1,142 +1,284 @@
-(() => {
-  const DATA_URL = "data/companies.json";
-  const REPO_URL = "https://github.com/wwlapaki310/wfh-status-jp";
+// wfh-status-jp — client-side spreadsheet + GitHub fork-and-PR editing flow
+// No backend. Data lives at data/companies.json in this repo.
 
-  const CATEGORY_LABEL = {
-    return_to_office: "週5出社便 / RETURN TO OFFICE",
-    remote_committed: "在宅継続便 / REMOTE COMMITTED",
-    hybrid: "ハイブリッド便 / HYBRID",
-  };
+const OWNER = "wwlapaki310";
+const REPO = "wfh-status-jp";
+const FILE_PATH = "data/companies.json";
+const BASE_BRANCH = "main";
+const API = "https://api.github.com";
 
-  const listEls = {
-    return_to_office: document.getElementById("list-return_to_office"),
-    remote_committed: document.getElementById("list-remote_committed"),
-    hybrid: document.getElementById("list-hybrid"),
-  };
+const CATEGORY_LABEL = {
+  return_to_office: "🏢 週5出社",
+  hybrid: "🔀 ハイブリッド",
+  remote_committed: "🏠 リモート継続",
+};
 
-  const searchInput = document.getElementById("searchInput");
-  const filterButtons = document.querySelectorAll(".filter-chip");
-  const lastUpdatedEl = document.getElementById("lastUpdated");
-  const totalCountEl = document.getElementById("totalCount");
-  const addCompanyLink = document.getElementById("addCompanyLink");
+let rows = [];       // working copy of company records
+let activeFilters = new Set(Object.keys(CATEGORY_LABEL));
+let searchTerm = "";
 
-  const detailPanel = document.getElementById("detailPanel");
-  const detailClose = document.getElementById("detailClose");
-  const detailCategory = document.getElementById("detailCategory");
-  const detailName = document.getElementById("detailName");
-  const detailDate = document.getElementById("detailDate");
-  const detailVerified = document.getElementById("detailVerified");
-  const detailSource = document.getElementById("detailSource");
-  const detailNotes = document.getElementById("detailNotes");
+const $ = (sel) => document.querySelector(sel);
+const body = $("#sheet-body");
+const statusLog = $("#status-log");
+const emptyState = $("#empty-state");
 
-  addCompanyLink.href = `${REPO_URL}/issues/new?template=add-company.yml`;
+$("#link-repo").href = `https://github.com/${OWNER}/${REPO}`;
 
-  let allCompanies = [];
-  let activeFilter = "all";
-  let searchTerm = "";
+function log(msg) {
+  statusLog.textContent = msg;
+}
 
-  function formatDate(d) {
-    if (!d) return "—";
-    return d;
+function uid() {
+  return "row-" + Math.random().toString(36).slice(2, 9);
+}
+
+// ---------- Load ----------
+async function loadData() {
+  log("データを読み込み中…");
+  try {
+    const res = await fetch(
+      `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BASE_BRANCH}/${FILE_PATH}?t=${Date.now()}`
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    rows = data.map((r) => ({ ...r, _uid: uid() }));
+    log("");
+  } catch (err) {
+    log(`データの読み込みに失敗しました: ${err.message}`);
+    rows = [];
   }
+  render();
+}
 
-  function escapeHtml(str) {
-    const div = document.createElement("div");
-    div.textContent = str ?? "";
-    return div.innerHTML;
+// ---------- Render ----------
+function matchesFilters(r) {
+  if (!activeFilters.has(r.category)) return false;
+  if (searchTerm && !r.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    return false;
+  return true;
+}
+
+function render() {
+  body.innerHTML = "";
+  const visible = rows.filter(matchesFilters);
+  emptyState.classList.toggle("hidden", visible.length > 0);
+
+  for (const r of visible) {
+    body.appendChild(renderRow(r));
   }
+}
 
-  function render() {
-    const term = searchTerm.trim().toLowerCase();
+function renderRow(r) {
+  const tr = document.createElement("tr");
+  tr.dataset.uid = r._uid;
 
-    Object.entries(listEls).forEach(([category, el]) => {
-      el.innerHTML = "";
+  tr.innerHTML = `
+    <td class="col-name"><input type="text" value="${escapeAttr(r.name || "")}" data-field="name" placeholder="会社名" /></td>
+    <td class="col-cat">
+      <select data-field="category">
+        ${Object.entries(CATEGORY_LABEL)
+          .map(
+            ([val, label]) =>
+              `<option value="${val}" ${r.category === val ? "selected" : ""}>${label}</option>`
+          )
+          .join("")}
+      </select>
+    </td>
+    <td class="col-date"><input type="date" value="${r.changedDate || ""}" data-field="changedDate" /></td>
+    <td class="col-src"><input type="url" value="${escapeAttr(r.sourceUrl || "")}" data-field="sourceUrl" placeholder="https://" /></td>
+    <td class="col-notes"><input type="text" value="${escapeAttr(r.notes || "")}" data-field="notes" placeholder="備考" /></td>
+    <td class="col-verified"><input type="date" value="${r.lastVerified || ""}" data-field="lastVerified" /></td>
+    <td class="col-op"><button class="btn-del" title="この行を削除">✕</button></td>
+  `;
 
-      if (activeFilter !== "all" && activeFilter !== category) {
-        el.closest(".board-panel").style.display = "none";
-        return;
-      }
-      el.closest(".board-panel").style.display = "";
-
-      const items = allCompanies
-        .filter((c) => c.category === category)
-        .filter((c) => !term || c.name.toLowerCase().includes(term))
-        .sort((a, b) => a.name.localeCompare(b.name, "ja"));
-
-      items.forEach((company, i) => {
-        const li = document.createElement("li");
-        li.className = "board-row";
-        li.tabIndex = 0;
-        li.style.animationDelay = `${Math.min(i, 12) * 35}ms`;
-        li.innerHTML = `
-          <span class="board-row__name">${escapeHtml(company.name)}</span>
-          <span class="board-row__date">${formatDate(company.changedDate)}</span>
-          <span class="board-row__flag" aria-hidden="true"></span>
-        `;
-        li.addEventListener("click", () => showDetail(company));
-        li.addEventListener("keydown", (e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            showDetail(company);
-          }
-        });
-        el.appendChild(li);
-      });
+  tr.querySelectorAll("[data-field]").forEach((el) => {
+    el.addEventListener("input", () => {
+      const rec = rows.find((x) => x._uid === r._uid);
+      rec[el.dataset.field] = el.value;
+      if (el.dataset.field === "category") render(); // may leave current filter
     });
-
-    const visibleCount = allCompanies.filter(
-      (c) => (activeFilter === "all" || c.category === activeFilter) &&
-        (!term || c.name.toLowerCase().includes(term))
-    ).length;
-    totalCountEl.textContent = `表示中 ${visibleCount} / 全 ${allCompanies.length} 社`;
-  }
-
-  function showDetail(company) {
-    detailCategory.textContent = CATEGORY_LABEL[company.category] || company.category;
-    detailName.textContent = company.name;
-    detailDate.textContent = formatDate(company.changedDate);
-    detailVerified.textContent = formatDate(company.lastVerified);
-    detailSource.innerHTML = company.sourceUrl
-      ? `<a href="${escapeHtml(company.sourceUrl)}" target="_blank" rel="noopener">出典を見る ↗</a>`
-      : "—";
-    detailNotes.textContent = company.notes || "補足情報はありません。";
-    detailPanel.hidden = false;
-  }
-
-  detailClose.addEventListener("click", () => { detailPanel.hidden = true; });
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") detailPanel.hidden = true;
   });
 
-  searchInput.addEventListener("input", (e) => {
-    searchTerm = e.target.value;
+  tr.querySelector(".btn-del").addEventListener("click", () => {
+    if (!confirm(`「${r.name || "この行"}」を削除しますか？`)) return;
+    rows = rows.filter((x) => x._uid !== r._uid);
     render();
   });
 
-  filterButtons.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      filterButtons.forEach((b) => b.classList.remove("is-active"));
-      btn.classList.add("is-active");
-      activeFilter = btn.dataset.filter;
-      render();
-    });
-  });
+  return tr;
+}
 
-  fetch(DATA_URL)
-    .then((res) => {
-      if (!res.ok) throw new Error(`データの取得に失敗しました (${res.status})`);
-      return res.json();
-    })
-    .then((data) => {
-      allCompanies = data;
-      const latest = data.reduce((max, c) => {
-        return c.lastVerified && c.lastVerified > max ? c.lastVerified : max;
-      }, "");
-      lastUpdatedEl.textContent = latest ? `最終更新: ${latest}` : "最終更新: —";
-      render();
-    })
-    .catch((err) => {
-      lastUpdatedEl.textContent = "データの読み込みに失敗しました";
-      console.error(err);
+function escapeAttr(s) {
+  return String(s).replace(/"/g, "&quot;");
+}
+
+// ---------- Toolbar ----------
+document.querySelectorAll(".chip").forEach((chip) => {
+  chip.addEventListener("click", () => {
+    const f = chip.dataset.filter;
+    if (activeFilters.has(f)) {
+      activeFilters.delete(f);
+      chip.classList.remove("active");
+    } else {
+      activeFilters.add(f);
+      chip.classList.add("active");
+    }
+    render();
+  });
+});
+
+$("#search").addEventListener("input", (e) => {
+  searchTerm = e.target.value.trim();
+  render();
+});
+
+$("#btn-add-row").addEventListener("click", () => {
+  const rec = {
+    _uid: uid(),
+    id: "",
+    name: "",
+    category: "return_to_office",
+    changedDate: "",
+    sourceUrl: "",
+    notes: "",
+    lastVerified: new Date().toISOString().slice(0, 10),
+  };
+  rows.unshift(rec);
+  render();
+  const firstInput = body.querySelector("tr input");
+  if (firstInput) firstInput.focus();
+});
+
+// ---------- Settings / PAT ----------
+const modal = $("#modal-settings");
+$("#btn-settings").addEventListener("click", () => {
+  $("#pat-input").value = localStorage.getItem("gh_pat") || "";
+  modal.classList.remove("hidden");
+});
+modal.addEventListener("click", (e) => {
+  if (e.target === modal) modal.classList.add("hidden");
+});
+$("#btn-pat-save").addEventListener("click", () => {
+  const v = $("#pat-input").value.trim();
+  if (v) localStorage.setItem("gh_pat", v);
+  modal.classList.add("hidden");
+});
+$("#btn-pat-clear").addEventListener("click", () => {
+  localStorage.removeItem("gh_pat");
+  $("#pat-input").value = "";
+});
+
+function getToken() {
+  return localStorage.getItem("gh_pat");
+}
+
+// ---------- Propose changes: fork -> branch -> commit -> PR ----------
+async function gh(path, token, opts = {}) {
+  const res = await fetch(`${API}${path}`, {
+    ...opts,
+    headers: {
+      Authorization: `token ${token}`,
+      Accept: "application/vnd.github+json",
+      ...(opts.body ? { "Content-Type": "application/json" } : {}),
+      ...opts.headers,
+    },
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`${opts.method || "GET"} ${path} -> ${res.status}: ${body.slice(0, 300)}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function proposeChanges() {
+  const token = getToken();
+  if (!token) {
+    log("先に「設定」からGitHubトークンを登録してください。");
+    modal.classList.remove("hidden");
+    return;
+  }
+
+  const btn = $("#btn-propose");
+  btn.disabled = true;
+
+  try {
+    log("GitHubアカウントを確認中…");
+    const me = await gh("/user", token);
+    const username = me.login;
+
+    let fork;
+    try {
+      fork = await gh(`/repos/${username}/${REPO}`, token);
+      log(`既存のフォーク ${username}/${REPO} を使用します…`);
+    } catch {
+      log(`${username}/${REPO} をフォーク中…`);
+      fork = await gh(`/repos/${OWNER}/${REPO}/forks`, token, { method: "POST" });
+      // Forking is async on GitHub's side; wait for it to become available.
+      for (let i = 0; i < 10; i++) {
+        await sleep(1500);
+        try {
+          await gh(`/repos/${username}/${REPO}`, token);
+          break;
+        } catch {
+          /* keep waiting */
+        }
+      }
+    }
+
+    const branchName = `edit-${Date.now()}`;
+    log("フォークの最新コミットを取得中…");
+    const ref = await gh(`/repos/${username}/${REPO}/git/ref/heads/${BASE_BRANCH}`, token);
+    const baseSha = ref.object.sha;
+
+    log(`ブランチ ${branchName} を作成中…`);
+    await gh(`/repos/${username}/${REPO}/git/refs`, token, {
+      method: "POST",
+      body: JSON.stringify({ ref: `refs/heads/${branchName}`, sha: baseSha }),
     });
-})();
+
+    log("変更内容をコミット中…");
+    const fileInfo = await gh(
+      `/repos/${username}/${REPO}/contents/${FILE_PATH}?ref=${branchName}`,
+      token
+    );
+
+    const cleaned = rows.map(({ _uid, ...rest }) => rest);
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(cleaned, null, 2) + "\n")));
+
+    await gh(`/repos/${username}/${REPO}/contents/${FILE_PATH}`, token, {
+      method: "PUT",
+      body: JSON.stringify({
+        message: "data: 企業リストを更新",
+        content,
+        sha: fileInfo.sha,
+        branch: branchName,
+      }),
+    });
+
+    log("プルリクエストを作成中…");
+    const pr = await gh(`/repos/${OWNER}/${REPO}/pulls`, token, {
+      method: "POST",
+      body: JSON.stringify({
+        title: "データ更新の提案",
+        head: `${username}:${branchName}`,
+        base: BASE_BRANCH,
+        body: "アプリ内の編集画面から自動生成されたプルリクエストです。内容を確認してマージしてください。",
+      }),
+    });
+
+    log(`✓ プルリクエストを作成しました: ${pr.html_url}`);
+    window.open(pr.html_url, "_blank");
+  } catch (err) {
+    log(`エラー: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+$("#btn-propose").addEventListener("click", proposeChanges);
+
+loadData();
