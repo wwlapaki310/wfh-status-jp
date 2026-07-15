@@ -1,0 +1,53 @@
+name: 企業情報の追加・更新を提案
+description: リストに企業を追加したい、または既存の情報を更新したい場合はこちらから
+title: "[企業情報] "
+labels: ["company-submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        企業のテレワーク／出社方針についての情報を投稿してください。
+        投稿内容は自動でPull Requestが作成され、メンテナーの確認後にサイトへ反映されます。
+
+  - type: input
+    id: name
+    attributes:
+      label: 企業名
+      placeholder: 例）ソニーグループ株式会社
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: 分類
+      options:
+        - return_to_office（週5出社に戻した）
+        - remote_committed（テレワークを継続）
+        - hybrid（ハイブリッド）
+    validations:
+      required: true
+
+  - type: input
+    id: changedDate
+    attributes:
+      label: 制度変更日（わかれば） YYYY-MM-DD形式
+      placeholder: 例）2024-04-01
+    validations:
+      required: false
+
+  - type: input
+    id: sourceUrl
+    attributes:
+      label: 出典URL（ニュース記事・公式発表など）
+      placeholder: https://example.com/news
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 補足情報
+      placeholder: 例）週5出社を義務化。ただし一部部署は例外あり。
+    validations:
+      required: false
