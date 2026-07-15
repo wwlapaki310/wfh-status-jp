@@ -1,113 +1,78 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>出社／在宅 運行状況掲示板</title>
-<meta name="description" content="テレワーク移行後に週5出社へ戻した企業と、テレワークを継続している企業の一覧。誰でも情報を追加・更新できます。">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>出社方針トラッカー — WFH Status Japan</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<div class="board-frame">
-
-  <header class="board-header">
-    <div class="board-header__top">
-      <span class="board-header__dot" aria-hidden="true"></span>
-      <span class="board-header__eyebrow">WORK STYLE DEPARTURE BOARD</span>
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="masthead-title">
+      <span class="eyebrow">FIELD RECORD</span>
+      <h1>出社方針トラッカー</h1>
+      <p class="sub">テレワーク移行後、週5出社に戻した企業と、信念を持ってリモートを続ける企業の記録簿。誰でも編集を提案できます。</p>
     </div>
-    <h1 class="board-header__title">出社／在宅<br class="only-mobile"> 運行状況</h1>
-    <p class="board-header__lead">
-      テレワーク移行後に「週5出社」へ戻した企業と、信念を持ってテレワークを継続している企業の一覧です。
-      情報はどなたでも追加・更新を提案できます。
-    </p>
-    <div class="board-header__meta">
-      <span id="lastUpdated">読込中…</span>
-      <span id="totalCount"></span>
-    </div>
-  </header>
-
-  <div class="controls">
-    <input
-      id="searchInput"
-      type="text"
-      class="controls__search"
-      placeholder="企業名で検索…"
-      aria-label="企業名で検索"
-    >
-    <div class="controls__filters" id="filterButtons">
-      <button class="filter-chip is-active" data-filter="all">すべて</button>
-      <button class="filter-chip" data-filter="return_to_office">週5出社便</button>
-      <button class="filter-chip" data-filter="remote_committed">在宅継続便</button>
-      <button class="filter-chip" data-filter="hybrid">ハイブリッド便</button>
+    <div class="masthead-actions">
+      <button id="btn-settings" class="btn btn-ghost" title="GitHubトークン設定">⚙ 設定</button>
+      <a id="link-repo" class="btn btn-ghost" href="#" target="_blank" rel="noopener">GitHub</a>
     </div>
   </div>
+</header>
 
-  <main class="boards">
-    <section class="board-panel board-panel--amber" aria-labelledby="board-rto-title">
-      <div class="board-panel__head">
-        <h2 id="board-rto-title">週5出社 便</h2>
-        <span class="board-panel__tag">RETURN TO OFFICE</span>
-      </div>
-      <div class="board-panel__cols">
-        <span>企業名</span><span>変更日</span><span>状況</span>
-      </div>
-      <ul class="board-rows" id="list-return_to_office" data-empty="該当する企業がまだ登録されていません。"></ul>
-    </section>
+<main>
+  <section class="toolbar">
+    <div class="filters">
+      <button class="chip chip-return active" data-filter="return_to_office">🏢 週5出社</button>
+      <button class="chip chip-hybrid active" data-filter="hybrid">🔀 ハイブリッド</button>
+      <button class="chip chip-remote active" data-filter="remote_committed">🏠 リモート継続</button>
+      <input id="search" type="search" placeholder="会社名で検索…" />
+    </div>
+    <div class="actions">
+      <button id="btn-add-row" class="btn btn-outline">＋ 行を追加</button>
+      <button id="btn-propose" class="btn btn-primary">変更を提案する（PR作成）</button>
+    </div>
+  </section>
 
-    <section class="board-panel board-panel--green" aria-labelledby="board-remote-title">
-      <div class="board-panel__head">
-        <h2 id="board-remote-title">在宅勤務 継続便</h2>
-        <span class="board-panel__tag">REMOTE COMMITTED</span>
-      </div>
-      <div class="board-panel__cols">
-        <span>企業名</span><span>変更日</span><span>状況</span>
-      </div>
-      <ul class="board-rows" id="list-remote_committed" data-empty="該当する企業がまだ登録されていません。"></ul>
-    </section>
+  <section class="table-wrap">
+    <table id="sheet">
+      <thead>
+        <tr>
+          <th class="col-name">会社名</th>
+          <th class="col-cat">区分</th>
+          <th class="col-date">変更日</th>
+          <th class="col-src">出典URL</th>
+          <th class="col-notes">備考</th>
+          <th class="col-verified">最終確認</th>
+          <th class="col-op"></th>
+        </tr>
+      </thead>
+      <tbody id="sheet-body">
+        <!-- rows injected by app.js -->
+      </tbody>
+    </table>
+    <p id="empty-state" class="empty-state hidden">該当する企業がまだありません。「＋ 行を追加」から記録できます。</p>
+  </section>
 
-    <section class="board-panel board-panel--hybrid" aria-labelledby="board-hybrid-title">
-      <div class="board-panel__head">
-        <h2 id="board-hybrid-title">ハイブリッド 便</h2>
-        <span class="board-panel__tag">HYBRID</span>
-      </div>
-      <div class="board-panel__cols">
-        <span>企業名</span><span>変更日</span><span>状況</span>
-      </div>
-      <ul class="board-rows" id="list-hybrid" data-empty="該当する企業がまだ登録されていません。"></ul>
-    </section>
-  </main>
+  <p id="status-log" class="status-log" aria-live="polite"></p>
+</main>
 
-  <div class="detail-panel" id="detailPanel" hidden>
-    <button class="detail-panel__close" id="detailClose" aria-label="閉じる">×</button>
-    <p class="detail-panel__category" id="detailCategory"></p>
-    <h3 class="detail-panel__name" id="detailName"></h3>
-    <dl class="detail-panel__meta">
-      <div><dt>制度変更日</dt><dd id="detailDate">—</dd></div>
-      <div><dt>最終確認日</dt><dd id="detailVerified">—</dd></div>
-      <div><dt>出典</dt><dd id="detailSource">—</dd></div>
-    </dl>
-    <p class="detail-panel__notes" id="detailNotes"></p>
+<!-- Settings modal -->
+<div id="modal-settings" class="modal hidden">
+  <div class="modal-card">
+    <h2>GitHub Personal Access Token</h2>
+    <p>変更を提案するには、<code>public_repo</code> 権限を持つ Fine-grained または Classic の Personal Access Token が必要です。トークンはこのブラウザの localStorage にのみ保存され、GitHub API 以外には一切送信されません。</p>
+    <p><a href="https://github.com/settings/tokens/new?description=wfh-status-jp&scopes=public_repo" target="_blank" rel="noopener">トークンを新規作成 →</a></p>
+    <input id="pat-input" type="password" placeholder="ghp_..." autocomplete="off" />
+    <div class="modal-actions">
+      <button id="btn-pat-clear" class="btn btn-ghost">削除</button>
+      <button id="btn-pat-save" class="btn btn-primary">保存</button>
+    </div>
   </div>
-
-  <footer class="board-footer">
-    <a class="board-footer__cta" id="addCompanyLink" href="#" target="_blank" rel="noopener">
-      + 企業情報を追加・更新する
-    </a>
-    <p class="board-footer__note">
-      投稿内容はGitHub Issueとして受け付け、自動でPull Requestが作成されます。
-      マージ前にメンテナーが出典を確認します。
-    </p>
-    <p class="board-footer__links">
-      <a href="https://github.com/wwlapaki310/wfh-status-jp" target="_blank" rel="noopener">GitHubリポジトリ</a>
-      ・
-      <a href="https://github.com/wwlapaki310/wfh-status-jp/blob/main/data/companies.json" target="_blank" rel="noopener">生データ (JSON)</a>
-    </p>
-  </footer>
-
 </div>
 
 <script src="app.js"></script>
