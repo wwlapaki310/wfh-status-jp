@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>出社／在宅 運行状況掲示板</title>
+<meta name="description" content="テレワーク移行後に週5出社へ戻した企業と、テレワークを継続している企業の一覧。誰でも情報を追加・更新できます。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="board-frame">
+
+  <header class="board-header">
+    <div class="board-header__top">
+      <span class="board-header__dot" aria-hidden="true"></span>
+      <span class="board-header__eyebrow">WORK STYLE DEPARTURE BOARD</span>
+    </div>
+    <h1 class="board-header__title">出社／在宅<br class="only-mobile"> 運行状況</h1>
+    <p class="board-header__lead">
+      テレワーク移行後に「週5出社」へ戻した企業と、信念を持ってテレワークを継続している企業の一覧です。
+      情報はどなたでも追加・更新を提案できます。
+    </p>
+    <div class="board-header__meta">
+      <span id="lastUpdated">読込中…</span>
+      <span id="totalCount"></span>
+    </div>
+  </header>
+
+  <div class="controls">
+    <input
+      id="searchInput"
+      type="text"
+      class="controls__search"
+      placeholder="企業名で検索…"
+      aria-label="企業名で検索"
+    >
+    <div class="controls__filters" id="filterButtons">
+      <button class="filter-chip is-active" data-filter="all">すべて</button>
+      <button class="filter-chip" data-filter="return_to_office">週5出社便</button>
+      <button class="filter-chip" data-filter="remote_committed">在宅継続便</button>
+      <button class="filter-chip" data-filter="hybrid">ハイブリッド便</button>
+    </div>
+  </div>
+
+  <main class="boards">
+    <section class="board-panel board-panel--amber" aria-labelledby="board-rto-title">
+      <div class="board-panel__head">
+        <h2 id="board-rto-title">週5出社 便</h2>
+        <span class="board-panel__tag">RETURN TO OFFICE</span>
+      </div>
+      <div class="board-panel__cols">
+        <span>企業名</span><span>変更日</span><span>状況</span>
+      </div>
+      <ul class="board-rows" id="list-return_to_office" data-empty="該当する企業がまだ登録されていません。"></ul>
+    </section>
+
+    <section class="board-panel board-panel--green" aria-labelledby="board-remote-title">
+      <div class="board-panel__head">
+        <h2 id="board-remote-title">在宅勤務 継続便</h2>
+        <span class="board-panel__tag">REMOTE COMMITTED</span>
+      </div>
+      <div class="board-panel__cols">
+        <span>企業名</span><span>変更日</span><span>状況</span>
+      </div>
+      <ul class="board-rows" id="list-remote_committed" data-empty="該当する企業がまだ登録されていません。"></ul>
+    </section>
+
+    <section class="board-panel board-panel--hybrid" aria-labelledby="board-hybrid-title">
+      <div class="board-panel__head">
+        <h2 id="board-hybrid-title">ハイブリッド 便</h2>
+        <span class="board-panel__tag">HYBRID</span>
+      </div>
+      <div class="board-panel__cols">
+        <span>企業名</span><span>変更日</span><span>状況</span>
+      </div>
+      <ul class="board-rows" id="list-hybrid" data-empty="該当する企業がまだ登録されていません。"></ul>
+    </section>
+  </main>
+
+  <div class="detail-panel" id="detailPanel" hidden>
+    <button class="detail-panel__close" id="detailClose" aria-label="閉じる">×</button>
+    <p class="detail-panel__category" id="detailCategory"></p>
+    <h3 class="detail-panel__name" id="detailName"></h3>
+    <dl class="detail-panel__meta">
+      <div><dt>制度変更日</dt><dd id="detailDate">—</dd></div>
+      <div><dt>最終確認日</dt><dd id="detailVerified">—</dd></div>
+      <div><dt>出典</dt><dd id="detailSource">—</dd></div>
+    </dl>
+    <p class="detail-panel__notes" id="detailNotes"></p>
+  </div>
+
+  <footer class="board-footer">
+    <a class="board-footer__cta" id="addCompanyLink" href="#" target="_blank" rel="noopener">
+      + 企業情報を追加・更新する
+    </a>
+    <p class="board-footer__note">
+      投稿内容はGitHub Issueとして受け付け、自動でPull Requestが作成されます。
+      マージ前にメンテナーが出典を確認します。
+    </p>
+    <p class="board-footer__links">
+      <a href="https://github.com/wwlapaki310/wfh-status-jp" target="_blank" rel="noopener">GitHubリポジトリ</a>
+      ・
+      <a href="https://github.com/wwlapaki310/wfh-status-jp/blob/main/data/companies.json" target="_blank" rel="noopener">生データ (JSON)</a>
+    </p>
+  </footer>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
