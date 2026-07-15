@@ -1,0 +1,20 @@
+[
+  {
+    "id": "example-return-to-office",
+    "name": "（サンプル）〇〇株式会社",
+    "category": "return_to_office",
+    "changedDate": "2024-04-01",
+    "sourceUrl": "https://example.com/news",
+    "notes": "週5出社を義務化。実際のデータに置き換えてください。",
+    "lastVerified": "2026-07-15"
+  },
+  {
+    "id": "example-remote-committed",
+    "name": "（サンプル）△△株式会社",
+    "category": "remote_committed",
+    "changedDate": null,
+    "sourceUrl": "https://example.com/news2",
+    "notes": "フルリモート方針を継続。実際のデータに置き換えてください。",
+    "lastVerified": "2026-07-15"
+  }
+]
